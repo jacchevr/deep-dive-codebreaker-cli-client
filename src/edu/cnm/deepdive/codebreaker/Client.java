@@ -83,13 +83,18 @@ public class Client {
     while (keepPlaying) {
       out.printf(bundle.getString(GUESS_PROMPT_KEY), guessCount);
       String input = in.nextLine().trim();
+      if (input.equals("HALP")) {
+        help();
+        break;
+      }
       while (input.length() != game.getLength() && !input.isEmpty()) {
         out.printf(bundle.getString(GUESS_LENGTH_ERROR_KEY), game.getLength());
         input = in.nextLine().trim();
+
       }
       if (input.isEmpty()) {
         keepPlaying = !surrender();
-      } else if (guess(input)) {
+      } else if (guess(input) == -1) {
         keepPlaying = false;
       } else {
         guessCount++;
@@ -97,17 +102,17 @@ public class Client {
     }
   }
 
-  private boolean guess(String input) throws IOException {
+  private int guess(String input) throws IOException {
     Guess guess = new Guess();
     guess.setGuess(input);
     guess = guessService.create(game.getId(), guess).execute().body();
     game = gameService.read(game.getId()).execute().body();
     if (game.isSolved()) {
       out.printf(bundle.getString(SOLVED_RESULT_KEY), guess.getGuess());
-      return true;
+      return -1;
     } else {
       out.printf(bundle.getString(GUESS_RESULT_KEY), guess.getInPlace(), guess.getOutOfPlace());
-      return false;
+      return guess.getInPlace();
     }
   }
 
@@ -126,4 +131,39 @@ public class Client {
     return false;
   }
 
+
+  public void help() throws IOException {
+    String input = "AAAA";
+    StringBuilder sb = new StringBuilder(input);
+    int letterIndex = 0;
+    int guessCount = 1;
+    int lastGuesses = -5;
+    boolean keepPlaying = true;
+
+    for (letterIndex = 0 ; letterIndex < game.getLength() ; letterIndex++){
+      char currentLetter = input.charAt(letterIndex);
+      guess(input);
+      keepPlaying = true;
+      System.out.println(input);
+      outer: while (keepPlaying) {
+        int algoGuesses = guess(input);
+        if (algoGuesses == -1) {
+          break;
+        }
+        if (lastGuesses + 1 == algoGuesses) {
+//            guess(input);
+          keepPlaying = false;
+        }
+        else if (lastGuesses - 1 == algoGuesses) {
+          currentLetter--;
+        } else {
+          currentLetter++;
+        }
+//        if (keepPlaying = true) {
+          sb.replace(letterIndex, letterIndex + 1, new String(new char[]{currentLetter}));
+          input = sb.toString();
+          lastGuesses = algoGuesses;
+      }
+    }
+  }
 }
